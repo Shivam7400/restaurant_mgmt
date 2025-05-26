@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from app.routes.auth_routes import auth_bp
 from app.routes.restaurant_routes import restaurant_bp
 from app.routes.branch_routes import branch_bp
+from app.routes.menu_routes import menu_bp
 from app.extensions import db, ma, jwt, migrate
 
 def create_app():
@@ -19,6 +20,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(restaurant_bp)
     app.register_blueprint(branch_bp)
+    app.register_blueprint(menu_bp)
 
     with app.app_context():
         db.create_all()
