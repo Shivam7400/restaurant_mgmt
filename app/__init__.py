@@ -9,6 +9,8 @@ from app.routes.menu_routes import menu_bp
 from app.routes.category_item_routes import category_bp
 from app.routes.order_routes import order_bp
 from app.extensions import db, ma, jwt, migrate
+from app.routes.table_routes import table_bp
+from app.routes.reservation_routes import reservation_bp
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +27,8 @@ def create_app():
     app.register_blueprint(menu_bp)
     app.register_blueprint(category_bp)
     app.register_blueprint(order_bp)
+    app.register_blueprint(table_bp)
+    app.register_blueprint(reservation_bp)
 
     with app.app_context():
         db.create_all()
