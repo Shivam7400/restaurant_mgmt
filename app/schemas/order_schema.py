@@ -13,5 +13,7 @@ class OrderSchema(Schema):
     branch_id = fields.Int(required=True)
     total_amount = fields.Float(required=True)
     status = fields.Str(dump_only=True)
+    payment_status = fields.Str(dump_only=True)
+    payment_method = fields.Str(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     order_items = fields.List(fields.Nested(OrderItemSchema), required=True)
