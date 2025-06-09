@@ -1,12 +1,14 @@
 from flask import Blueprint, request, jsonify
 from app.models.order import Order, OrderItem
 from app.schemas.order_schema import OrderSchema
+from app.schemas.payment_schema import PaymentUpdateSchema
 from app.extensions import db
 from app.utils.decorators import admin_required
 
 order_bp = Blueprint("orders", __name__, url_prefix="/orders")
 order_schema = OrderSchema()
 orders_schema = OrderSchema(many=True)
+payment_update_schema = PaymentUpdateSchema()
 
 @order_bp.route("/", methods=["POST"])
 @admin_required
@@ -19,8 +21,7 @@ def create_order():
     order = Order(
         user_id=data["user_id"],
         branch_id=data["branch_id"],
-        total_amount=data["total_amount"],
-        status="pending"
+        total_amount=data["total_amount"]
     )
     db.session.add(order)
     db.session.flush()
@@ -29,9 +30,7 @@ def create_order():
         order_item = OrderItem(
             order_id=order.id,
             item_id=item["item_id"],
-            quantity=item["quantity"],
-            unit_price=item["unit_price"],
-            total_price=item["unit_price"] * item["quantity"]
+            quantity=item["quantity"]
         )
         db.session.add(order_item)
 
@@ -39,11 +38,13 @@ def create_order():
     return jsonify(order_schema.dump(order)), 201
 
 @order_bp.route("/", methods=["GET"])
+@admin_required
 def get_orders():
     orders = Order.query.all()
     return jsonify(orders_schema.dump(orders)), 200
 
 @order_bp.route("/<int:order_id>", methods=["GET"])
+@admin_required
 def get_order(order_id):
     order = Order.query.get_or_404(order_id)
     return jsonify(order_schema.dump(order)), 200
@@ -56,20 +57,24 @@ def delete_order(order_id):
     db.session.commit()
     return jsonify({"message": "Order deleted"}), 200
 
-@order_bp.route("/<int:order_id>/status", methods=["PUT"])
+@order_bp.route("/<int:order_id>/payment-status", methods=["PUT"])
 @admin_required
-def update_order_status(order_id):
-    order = Order.query.get_or_404(order_id)
+def update_payment_status(order_id):
     data = request.get_json()
-    new_status = data.get("status")
-    if new_status not in ["pending", "confirmed", "completed", "cancelled"]:
-        return jsonify({"error": "Invalid status"}), 400
+    errors = payment_update_schema.validate(data)
+    if errors:
+        return jsonify(errors), 400
 
-    order.status = new_status
+    payment_status = data.get("payment_status")
+    payment_method = data.get("payment_method")
+
+    order = Order.query.get_or_404(order_id)
+    order.payment_status = payment_status
+    if payment_method:
+        order.payment_method = payment_method
+
     db.session.commit()
-    return jsonify(order_schema.dump(order)), 200
-
-@order_bp.route("/user/<int:user_id>", methods=["GET"])
-def get_orders_by_user(user_id):
-    orders = Order.query.filter_by(user_id=user_id).all()
-    return jsonify(orders_schema.dump(orders)), 200
+    return jsonify({
+        "message": "Payment status updated",
+        "order": order_schema.dump(order)
+    }), 200
