@@ -78,3 +78,22 @@ def update_payment_status(order_id):
         "message": "Payment status updated",
         "order": order_schema.dump(order)
     }), 200
+
+@order_bp.route("/<int:order_id>/status", methods=["PUT"])
+@admin_required
+def update_order_status(order_id):
+    data = request.get_json()
+    new_status = data.get("status")
+    allowed_statuses = ["pending", "confirmed", "completed", "cancelled"]
+
+    if new_status not in allowed_statuses:
+        return jsonify({"error": "Invalid status value"}), 400
+
+    order = Order.query.get_or_404(order_id)
+    order.status = new_status
+    db.session.commit()
+
+    return jsonify({
+        "message": "Order status updated",
+        "order": order_schema.dump(order)
+    }), 200
