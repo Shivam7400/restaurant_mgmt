@@ -10,6 +10,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 staff_schema = StaffSchema()
 
 @auth_bp.route("/register", methods=["POST"])
+@admin_required
 def register():
     data = request.get_json()
     errors = staff_schema.validate(data)
@@ -44,15 +45,15 @@ def login():
         identity=str(staff.id),
         additional_claims={"username": staff.username, "role": staff.role}
     )
-    return jsonify(access_token=access_token), 200
+    return jsonify({"access_token": access_token, "user": {"id": staff.id, "username": staff.username, "role": staff.role}}), 200
 
 @auth_bp.route("/protected", methods=["GET"])
 @jwt_required()
 def protected():
     jwt_data = get_jwt()
-    return {"msg": f"Hello {jwt_data['username']}! You are a {jwt_data['role']}"}
+    return {"msg": f"Hello {jwt_data['username']}! You are a {jwt_data['role']}"}, 200
 
 @auth_bp.route("/admin-only", methods=["GET"])
 @admin_required
 def admin_only():
-    return {"msg": "Welcome Admin! This is a restricted route."}
+    return {"msg": "Welcome Admin! This is a restricted route."}, 200
