@@ -21,3 +21,19 @@ def staff_required(fn):
             return jsonify({"msg": "Staff access required"}), 403
         return fn(*args, **kwargs)
     return wrapper
+
+def role_required(role):
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request()
+            claims = get_jwt()
+            if claims.get("role") != role:
+                return jsonify({"error": "Access Forbidden"}), 403
+            return fn(*args, **kwargs)
+        return decorator
+    return wrapper
+
+admin_required = role_required("admin")
+staff_required = role_required("staff")
+customer_required = role_required("customer")
