@@ -1,15 +1,18 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from app.models.staff import Staff
-from app.extensions import db
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt
 from app.schemas.staff_schema import StaffSchema
+from app.extensions import db
 from app.utils.decorators import admin_required
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
-
 staff_schema = StaffSchema()
+from werkzeug.security import generate_password_hash, check_password_hash
+
+auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+staffs_schema = StaffSchema(many=True)
 
 @auth_bp.route("/register", methods=["POST"])
+@jwt_required()
 @admin_required
 def register():
     data = request.get_json()
@@ -45,15 +48,38 @@ def login():
         identity=str(staff.id),
         additional_claims={"username": staff.username, "role": staff.role}
     )
-    return jsonify({"access_token": access_token, "user": {"id": staff.id, "username": staff.username, "role": staff.role}}), 200
+    return jsonify({
+        "access_token": access_token,
+        "user": {
+            "id": staff.id,
+            "username": staff.username,
+            "role": staff.role
+        }
+    }), 200
+
+@auth_bp.route("/me", methods=["GET"])
+@jwt_required()
+def get_current_user():
+    jwt_data = get_jwt()
+    return jsonify({
+        "username": jwt_data["username"],
+        "role": jwt_data["role"]
+    }), 200
 
 @auth_bp.route("/protected", methods=["GET"])
 @jwt_required()
 def protected():
     jwt_data = get_jwt()
-    return {"msg": f"Hello {jwt_data['username']}! You are a {jwt_data['role']}"}, 200
+    return jsonify({"msg": f"Hello {jwt_data['username']}! You are a {jwt_data['role']}"}), 200
 
 @auth_bp.route("/admin-only", methods=["GET"])
 @admin_required
 def admin_only():
-    return {"msg": "Welcome Admin! This is a restricted route."}, 200
+    return jsonify({"msg": "Welcome Admin! This is a restricted route."}), 200
+
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    jti = get_jwt()["jti"]
+    return jsonify({"msg": "Successfully logged out"}), 200
