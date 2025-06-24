@@ -28,11 +28,60 @@ def create_restaurant():
     db.session.commit()
     return restaurant_schema.dump(restaurant), 201
 
+
 @restaurant_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_restaurants():
     restaurants = Restaurant.query.all()
     return restaurant_list_schema.dump(restaurants), 200
+
+
+@restaurant_bp.route("/<int:restaurant_id>", methods=["PUT"])
+@jwt_required()
+@admin_required
+def update_restaurant(restaurant_id):
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    data = request.get_json()
+    restaurant.name = data.get("name", restaurant.name)
+    restaurant.description = data.get("description", restaurant.description)
+    db.session.commit()
+    return restaurant_schema.dump(restaurant), 200
+
+
+@restaurant_bp.route("/<int:restaurant_id>", methods=["DELETE"])
+@jwt_required()
+@admin_required
+def delete_restaurant(restaurant_id):
+    """
+    Delete a restaurant (only if it has no branches)
+    ---
+    tags:
+      - Restaurants
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: restaurant_id
+        in: path
+        required: true
+        type: integer
+    responses:
+      200:
+        description: Restaurant deleted successfully
+      400:
+        description: Cannot delete restaurant with existing branches
+      404:
+        description: Restaurant not found
+    """
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+
+    # Check if any branches exist for this restaurant
+    if Branch.query.filter_by(restaurant_id=restaurant.id).first():
+        return jsonify({"error": "Cannot delete restaurant with existing branches"}), 400
+
+    db.session.delete(restaurant)
+    db.session.commit()
+    return jsonify({"message": "Restaurant deleted successfully"}), 200
+
 
 @restaurant_bp.route("/<int:restaurant_id>/branches", methods=["POST"])
 @jwt_required()
@@ -49,8 +98,31 @@ def create_branch(restaurant_id):
     db.session.commit()
     return branch_schema.dump(branch), 201
 
+
 @restaurant_bp.route("/<int:restaurant_id>/branches", methods=["GET"])
 @jwt_required()
 def get_branches(restaurant_id):
     branches = Branch.query.filter_by(restaurant_id=restaurant_id).all()
     return branch_list_schema.dump(branches), 200
+
+
+@restaurant_bp.route("/<int:restaurant_id>/branches/<int:branch_id>", methods=["PUT"])
+@jwt_required()
+@admin_required
+def update_branch(restaurant_id, branch_id):
+    branch = Branch.query.get_or_404(branch_id)
+    data = request.get_json()
+    branch.address = data.get("address", branch.address)
+    branch.city = data.get("city", branch.city)
+    db.session.commit()
+    return branch_schema.dump(branch), 200
+
+
+@restaurant_bp.route("/<int:restaurant_id>/branches/<int:branch_id>", methods=["DELETE"])
+@jwt_required()
+@admin_required
+def delete_branch(restaurant_id, branch_id):
+    branch = Branch.query.get_or_404(branch_id)
+    db.session.delete(branch)
+    db.session.commit()
+    return jsonify({"message": "Branch deleted successfully"}), 200
