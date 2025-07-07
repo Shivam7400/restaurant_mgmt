@@ -17,6 +17,30 @@ items_schema = ItemSchema(many=True)
 @jwt_required()
 @admin_required
 def create_category():
+    """
+    Create a new category
+    ---
+    tags:
+      - Category
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: category
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+    responses:
+      201:
+        description: Category created successfully
+      400:
+        description: Invalid input
+    """
     data = request.get_json()
     category = Category(**data)
     db.session.add(category)
@@ -27,6 +51,17 @@ def create_category():
 @category_bp.route("/categories/", methods=["GET"])
 @jwt_required()
 def get_categories():
+    """
+    Get all categories
+    ---
+    tags:
+      - Category
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: List of categories
+    """
     categories = Category.query.all()
     return categories_schema.dump(categories), 200
 
@@ -35,6 +70,32 @@ def get_categories():
 @jwt_required()
 @admin_required
 def update_category(category_id):
+    """
+    Update a category by ID
+    ---
+    tags:
+      - Category
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: category
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+    responses:
+      200:
+        description: Category updated successfully
+      404:
+        description: Category not found
+    """
     category = Category.query.get_or_404(category_id)
     data = request.get_json()
     category.name = data.get("name", category.name)
@@ -46,6 +107,24 @@ def update_category(category_id):
 @jwt_required()
 @admin_required
 def delete_category(category_id):
+    """
+    Delete a category if it has no items
+    ---
+    tags:
+      - Category
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Category deleted successfully
+      400:
+        description: Cannot delete category with items
+    """
     category = Category.query.get_or_404(category_id)
     items = Item.query.filter_by(category_id=category_id).first()
     if items:
@@ -60,6 +139,39 @@ def delete_category(category_id):
 @jwt_required()
 @admin_required
 def create_item(category_id):
+    """
+    Create a new item under a category
+    ---
+    tags:
+      - Item
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: item
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - price
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            price:
+              type: number
+    responses:
+      201:
+        description: Item created successfully
+      400:
+        description: Invalid input
+    """
     data = request.get_json()
     data["category_id"] = category_id
     item = Item(**data)
@@ -71,6 +183,24 @@ def create_item(category_id):
 @category_bp.route("/categories/<int:category_id>/items/", methods=["GET"])
 @jwt_required()
 def get_items(category_id):
+    """
+    Get all items under a category
+    ---
+    tags:
+      - Item
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: List of items
+      404:
+        description: Category not found
+    """
     items = Item.query.filter_by(category_id=category_id).all()
     return items_schema.dump(items), 200
 
@@ -79,6 +209,40 @@ def get_items(category_id):
 @jwt_required()
 @admin_required
 def update_item(category_id, item_id):
+    """
+    Update an item under a category
+    ---
+    tags:
+      - Item
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+      - name: item_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: item
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            price:
+              type: number
+    responses:
+      200:
+        description: Item updated successfully
+      404:
+        description: Item not found
+    """
     item = Item.query.filter_by(category_id=category_id, id=item_id).first_or_404()
     data = request.get_json()
     for field in ["name", "description", "price"]:
@@ -92,6 +256,28 @@ def update_item(category_id, item_id):
 @jwt_required()
 @admin_required
 def delete_item(category_id, item_id):
+    """
+    Delete an item under a category
+    ---
+    tags:
+      - Item
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: category_id
+        in: path
+        type: integer
+        required: true
+      - name: item_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Item deleted successfully
+      404:
+        description: Item not found
+    """
     item = Item.query.filter_by(category_id=category_id, id=item_id).first_or_404()
     db.session.delete(item)
     db.session.commit()
