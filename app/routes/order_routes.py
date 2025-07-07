@@ -13,6 +13,46 @@ payment_update_schema = PaymentUpdateSchema()
 @order_bp.route("/", methods=["POST"])
 @admin_required
 def create_order():
+    """
+    Create a new order
+    ---
+    tags:
+      - Orders
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - user_id
+              - branch_id
+              - total_amount
+              - order_items
+            properties:
+              user_id:
+                type: integer
+              branch_id:
+                type: integer
+              total_amount:
+                type: number
+              order_items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    item_id:
+                      type: integer
+                    quantity:
+                      type: integer
+    responses:
+      201:
+        description: Order created
+      400:
+        description: Validation error
+    """
     data = request.get_json()
     errors = order_schema.validate(data)
     if errors:
@@ -40,18 +80,67 @@ def create_order():
 @order_bp.route("/", methods=["GET"])
 @admin_required
 def get_orders():
+    """
+    Get all orders
+    ---
+    tags:
+      - Orders
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: A list of orders
+    """
     orders = Order.query.all()
     return jsonify(orders_schema.dump(orders)), 200
 
 @order_bp.route("/<int:order_id>", methods=["GET"])
 @admin_required
 def get_order(order_id):
+    """
+    Get a specific order by ID
+    ---
+    tags:
+      - Orders
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Order details
+      404:
+        description: Order not found
+    """
     order = Order.query.get_or_404(order_id)
     return jsonify(order_schema.dump(order)), 200
 
 @order_bp.route("/<int:order_id>", methods=["DELETE"])
 @admin_required
 def delete_order(order_id):
+    """
+    Delete an order
+    ---
+    tags:
+      - Orders
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Order deleted
+      404:
+        description: Order not found
+    """
     order = Order.query.get_or_404(order_id)
     db.session.delete(order)
     db.session.commit()
@@ -60,6 +149,37 @@ def delete_order(order_id):
 @order_bp.route("/<int:order_id>/payment-status", methods=["PUT"])
 @admin_required
 def update_payment_status(order_id):
+    """
+    Update the order status
+    ---
+    tags:
+      - Orders
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: path
+        name: order_id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [pending, confirmed, completed, cancelled]
+    responses:
+      200:
+        description: Order status updated
+      400:
+        description: Invalid status value
+      404:
+        description: Order not found
+    """
     data = request.get_json()
     errors = payment_update_schema.validate(data)
     if errors:
