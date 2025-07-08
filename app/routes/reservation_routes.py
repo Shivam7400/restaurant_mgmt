@@ -14,6 +14,27 @@ reservations_schema = ReservationSchema(many=True)
 @reservation_bp.route("/", methods=["POST"])
 @jwt_required()
 def create_reservation():
+    """
+    Create a new reservation
+    ---
+    tags:
+      - Reservations
+    security:
+      - BearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/definitions/Reservation'
+    responses:
+      201:
+        description: Reservation created successfully
+        schema:
+          $ref: '#/definitions/Reservation'
+      400:
+        description: Table is not available
+    """
     data = request.get_json()
     user_id = get_jwt_identity()
     data["user_id"] = user_id
@@ -32,6 +53,21 @@ def create_reservation():
 @reservation_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_reservations():
+    """
+    Get all reservations for current user
+    ---
+    tags:
+      - Reservations
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: List of reservations
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/Reservation'
+    """
     user_id = get_jwt_identity()
     reservations = Reservation.query.filter_by(user_id=user_id).all()
     return reservations_schema.jsonify(reservations), 200
@@ -40,12 +76,58 @@ def get_reservations():
 @reservation_bp.route("/<int:reservation_id>", methods=["GET"])
 @jwt_required()
 def get_reservation(reservation_id):
+    """
+    Get a reservation by ID
+    ---
+    tags:
+      - Reservations
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: reservation_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Reservation found
+        schema:
+          $ref: '#/definitions/Reservation'
+      404:
+        description: Reservation not found
+    """
     reservation = Reservation.query.get_or_404(reservation_id)
     return reservation_schema.jsonify(reservation), 200
 
 @reservation_bp.route("/<int:reservation_id>", methods=["PUT"])
 @jwt_required()
 def update_reservation(reservation_id):
+    """
+    Update a reservation
+    ---
+    tags:
+      - Reservations
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: reservation_id
+        in: path
+        type: integer
+        required: true
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/definitions/Reservation'
+    responses:
+      200:
+        description: Updated reservation
+        schema:
+          $ref: '#/definitions/Reservation'
+      403:
+        description: Unauthorized
+    """
     reservation = Reservation.query.get_or_404(reservation_id)
     user_id = get_jwt_identity()
     if reservation.user_id != user_id:
@@ -59,6 +141,26 @@ def update_reservation(reservation_id):
 @reservation_bp.route("/<int:reservation_id>", methods=["DELETE"])
 @jwt_required()
 def delete_reservation(reservation_id):
+    """
+    Delete a reservation
+    ---
+    tags:
+      - Reservations
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: reservation_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Reservation cancelled successfully
+      403:
+        description: Unauthorized
+      404:
+        description: Reservation not found
+    """
     reservation = Reservation.query.get_or_404(reservation_id)
     user_id = get_jwt_identity()
     if reservation.user_id != user_id:
