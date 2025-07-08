@@ -13,6 +13,27 @@ invoices_schema = InvoiceSchema(many=True)
 @invoice_bp.route("/<int:order_id>", methods=["POST"])
 @admin_required
 def generate_invoice(order_id):
+    """
+    Generate an invoice for a completed order
+    ---
+    tags:
+      - Invoice
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: order_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the completed order
+    responses:
+      201:
+        description: Invoice generated successfully
+      400:
+        description: Invoice already exists or order not completed
+      404:
+        description: Order not found
+    """
     order = Order.query.get_or_404(order_id)
 
     if order.status != "completed":
@@ -35,5 +56,16 @@ def generate_invoice(order_id):
 @invoice_bp.route("/", methods=["GET"])
 @admin_required
 def list_invoices():
+    """
+    List all invoices
+    ---
+    tags:
+      - Invoice
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: A list of invoices
+    """
     invoices = Invoice.query.all()
     return jsonify(invoices_schema.dump(invoices)), 200
